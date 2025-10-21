@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# Airflow
+logs/
+*.log
+
+# Data
+data/raw/*
+data/staging/*
+data/curated/*
+
+# Docker
+*.pid
+*.sock
+
+# Env
+config/.env
+.env

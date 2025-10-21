@@ -1,0 +1,26 @@
+# --- Core ---
+pandas==2.2.2
+numpy==1.26.4
+
+# --- Airflow & PostgreSQL ---
+apache-airflow==2.9.0
+apache-airflow-providers-postgres==6.3.0
+psycopg2-binary==2.9.9     # driver PostgreSQL
+
+# --- Web app / API (si tu veux une interface simple) ---
+fastapi==0.112.0
+uvicorn==0.30.1
+
+# --- Visualisation (facultatif mais conseillé) ---
+matplotlib==3.8.4
+plotly==5.22.0
+streamlit==1.36.0           # bonus visualisation interactive
+
+# --- Outils data ---
+tqdm==4.66.4                # barres de progression
+python-dotenv==1.0.1        # gestion des variables d'environnement (.env)
+
+# --- Bonus (pour +points optionnels) ---
+redis==5.0.4                # cache
+py2neo==2021.2.4            # Neo4j connector (graph DB)
+pymongo==4.10.1             # MongoDB connector (si tu veux montrer ingestion alternative)

@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph RAW["Landing Zone (data/raw)"]
+        A1[Age Dataset CSV]
+        A2[WHO Life Expectancy CSV]
+    end
+
+    subgraph STAGING["Staging Zone (data/staging)"]
+        B1[Cleaned Age Data]
+        B2[Cleaned Life Data]
+        B3[Joined + Enriched Dataset]
+    end
+
+    subgraph CURATED["Production Zone (data/curated)"]
+        C1[PostgreSQL DB]
+        C2[Analytical Views]
+        C3["Dashboard (FastAPI / Streamlit)"]
+    end
+
+    A1 -->|Ingestion DAG| B1
+    A2 -->|Ingestion DAG| B2
+    B1 -->|Transformation DAG| B3
+    B2 -->|Transformation DAG| B3
+    B3 -->|Production DAG| C1
+    C1 --> C2
+    C2 --> C3
+
+    subgraph AIRFLOW["Apache Airflow (docker)"]
+        D1[Ingestion Pipeline]
+        D2[Transformation Pipeline]
+        D3[Production Pipeline]
+    end
+
+    D1 --> D2 --> D3
