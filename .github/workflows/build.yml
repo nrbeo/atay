@@ -35,7 +35,7 @@ jobs:
 
       - name: Validate Docker Compose configuration
         run: |
-          docker-compose -f docker/docker-compose.yml config
+          docker compose -f docker/docker-compose.yml config
 
       - name: Lint Python code
         run: |
