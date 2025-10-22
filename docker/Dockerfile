@@ -1,8 +1,0 @@
-FROM apache/airflow:3.1.0
-
-USER root
-RUN apt-get update && apt-get install -y python3-dev build-essential
-
-USER airflow
-COPY requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt
