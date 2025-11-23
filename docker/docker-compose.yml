@@ -24,8 +24,10 @@ x-airflow-common:
     - ../src/dags:/opt/airflow/dags
     - ../src/etl:/opt/airflow/etl
     - ../data:/opt/airflow/data
+    - ../tmp:/opt/airflow/tmp
     - ../logs:/opt/airflow/logs
     - ../config:/opt/airflow/config
+    - ../kaggle:/home/airflow/.kaggle
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -54,6 +56,20 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
+    restart: always
+    networks:
+      - atay_network
+
+  mongo:
+    image: mongo:7
+    container_name: atay_mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "${MONGO_PORT}:27017"
+    volumes:
+      - mongo-data:/data/db
     restart: always
     networks:
       - atay_network
@@ -321,6 +337,24 @@ services:
     networks:
       - atay_network
 
+  mongo-express:
+    image: mongo-express:latest
+    container_name: atay_mongo_express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${ME_CONFIG_MONGODB_ADMINUSERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${ME_CONFIG_MONGODB_ADMINPASSWORD}
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: ${ME_CONFIG_MONGODB_SERVER}
+      ME_CONFIG_MONGODB_PORT: "${ME_CONFIG_MONGODB_PORT}"
+    ports:
+      - "${ME_PORT}:8081"
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - atay_network
+      
   streamlit:
     build:
       context: ../
@@ -348,3 +382,4 @@ networks:
 
 volumes:
   postgres-db-volume:
+  mongo-data:

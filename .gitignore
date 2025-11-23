@@ -1,5 +1,5 @@
 # Python
-__pycache__/
+*/__pycache__/
 *.pyc
 
 # Airflow
@@ -10,6 +10,7 @@ logs/
 data/raw/*
 data/staging/*
 data/curated/*
+tmp/*
 
 # Docker
 *.pid
