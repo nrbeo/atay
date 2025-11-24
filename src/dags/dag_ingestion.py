@@ -40,19 +40,19 @@ with DAG(
     t_download_gsod_archives = PythonOperator(
         task_id="download_gsod_archives",
         python_callable=download_gsod_archives,
-        execution_timeout=timedelta(hours=1),
+        execution_timeout=timedelta(hours=2),
     )
 
     t_extract_gsod_archives = PythonOperator(
         task_id="extract_gsod_archives",
         python_callable=extract_gsod_archives,
-        execution_timeout=timedelta(hours=1),
+        execution_timeout=timedelta(hours=2),
     )
 
     t_merge_gsod_years = PythonOperator(
         task_id="merge_gsod_years",
         python_callable=merge_gsod_years,
-        execution_timeout=timedelta(hours=1),
+        execution_timeout=timedelta(hours=3),
     )
 
     t_insert_ufo = PythonOperator(

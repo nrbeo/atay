@@ -158,10 +158,53 @@ def download_gsod_archives():
 
     return downloaded
 
+# def extract_gsod_archives():
+#     """
+#     2) Extraction en parallèle des archives GSOD
+#     """
+#     import tarfile
+#     from concurrent.futures import ThreadPoolExecutor
+#     import os
+
+#     ARCHIVE_DIR = RAW_DATA_PATH / "tmp_gsod" / "archives"
+#     EXTRACT_DIR = RAW_DATA_PATH / "tmp_gsod" / "extracted"
+#     EXTRACT_DIR.mkdir(parents=True, exist_ok=True)
+
+#     archives = list(ARCHIVE_DIR.glob("*.tar.gz"))
+#     if not archives:
+#         raise RuntimeError("Aucune archive .tar.gz trouvée.")
+
+#     def extract_archive(path):
+#         year = path.stem  # "1980"
+#         target = EXTRACT_DIR / year
+#         target.mkdir(parents=True, exist_ok=True)
+#         try:
+#             with tarfile.open(path, "r:gz") as tar:
+#                 tar.extractall(path=target)
+#             print(f"[GSOD] Extract OK : {year}")
+#             return year
+#         except Exception as e:
+#             print(f"[GSOD] Extract FAIL {year}: {e}")
+#             return None
+
+#     print("\n=== EXTRACTION PHASE ===")
+#     with ThreadPoolExecutor(max_workers=3) as pool:
+#         results = list(pool.map(extract_archive, archives))
+
+#     extracted = [y for y in results if y]
+#     if not extracted:
+#         raise RuntimeError("Aucune extraction GSOD réussie.")
+
+#     return extracted
+
 def extract_gsod_archives():
     """
-    2) Extraction en parallèle des archives GSOD
+    2) Extraction en parallèle des archives GSOD (.tar.gz → .tar → .csv)
+    NOAA fournit des archives doublement encapsulées :
+    - 1980.tar.gz contient → 1980.tar
+    - 1980.tar contient → des milliers de CSV
     """
+
     import tarfile
     from concurrent.futures import ThreadPoolExecutor
     import os
@@ -175,17 +218,37 @@ def extract_gsod_archives():
         raise RuntimeError("Aucune archive .tar.gz trouvée.")
 
     def extract_archive(path):
-        year = path.stem  # "1980"
-        target = EXTRACT_DIR / year
-        target.mkdir(parents=True, exist_ok=True)
+        year = path.name.replace(".tar.gz", "")
+        year_dir = EXTRACT_DIR / year
+        year_dir.mkdir(parents=True, exist_ok=True)
+
         try:
+            # ---- 1) EXTRACTION DU .tar.gz ----
             with tarfile.open(path, "r:gz") as tar:
-                tar.extractall(path=target)
-            print(f"[GSOD] Extract OK : {year}")
+                tar.extractall(path=year_dir)
+
+            # ---- 2) SOIT un .tar interne, soit directement des CSV ----
+            inner_tars = list(year_dir.glob("*.tar"))
+
+            if inner_tars:
+                inner_tar = inner_tars[0]
+
+                with tarfile.open(inner_tar, "r:") as tar:
+                    tar.extractall(path=year_dir)
+
+                inner_tar.unlink()
+                print(f"[GSOD] Extract OK (tar+tar.gz) : {year}")
+
+            else:
+                # pas de .tar → structure directe déjà OK
+                print(f"[GSOD] Extract OK (direct CSV) : {year}")
+
             return year
+
         except Exception as e:
             print(f"[GSOD] Extract FAIL {year}: {e}")
             return None
+
 
     print("\n=== EXTRACTION PHASE ===")
     with ThreadPoolExecutor(max_workers=3) as pool:
@@ -211,7 +274,7 @@ def merge_gsod_years():
     FINAL_DIR = GSOD_RAW_DIR
     FINAL_DIR.mkdir(parents=True, exist_ok=True)
 
-    final_path = FINAL_DIR / "gsod_1980_2010.csv"
+    final_path = FINAL_DIR / "gsod_1980_2000.csv"
 
     # Écraser le fichier s'il existe
     if final_path.exists():
@@ -287,7 +350,7 @@ def insert_ufo_into_mongo():
 def insert_gsod_into_mongo():
     import pandas as pd
 
-    merged_path = GSOD_RAW_DIR / "gsod_1980_2010.csv"
+    merged_path = GSOD_RAW_DIR / "gsod_1980_2000.csv"
 
     if not merged_path.exists():
         raise FileNotFoundError(f"GSOD fusionné introuvable : {merged_path}")
