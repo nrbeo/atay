@@ -120,14 +120,14 @@ BASE_ARCHIVE_URL = "https://www.ncei.noaa.gov/data/global-summary-of-the-day/arc
 
 def download_gsod_archives():
     """
-    1) Download en parallèle des archives GSOD .tar.gz (1980–2000)
+    1) Download en parallèle des archives GSOD .tar.gz (1980–1990)
     """
     import requests
     from concurrent.futures import ThreadPoolExecutor
 
     init_dirs()
 
-    YEARS = range(1980, 2001)
+    YEARS = range(1980, 1991)  # 1980 à 1990 inclus
     BASE_URL = "https://www.ncei.noaa.gov/data/global-summary-of-the-day/archive"
 
     ARCHIVE_DIR = RAW_DATA_PATH / "tmp_gsod" / "archives"
@@ -274,7 +274,7 @@ def merge_gsod_years():
     FINAL_DIR = GSOD_RAW_DIR
     FINAL_DIR.mkdir(parents=True, exist_ok=True)
 
-    final_path = FINAL_DIR / "gsod_1980_2000.csv"
+    final_path = FINAL_DIR / "gsod_1980_1990.csv"
 
     # Écraser le fichier s'il existe
     if final_path.exists():
@@ -347,25 +347,168 @@ def insert_ufo_into_mongo():
     return f"[UFO] {len(records)} documents insérés"
 
 
+# def insert_gsod_into_mongo():
+#     import pandas as pd
+    
+#     print("Insertion GSOD dans MongoDB...")
+
+#     merged_path = GSOD_RAW_DIR / "gsod_1980_1990.csv"
+
+#     if not merged_path.exists():
+#         print(f"[GSOD] Fichier fusionné introuvable : {merged_path}")
+#         raise FileNotFoundError(f"GSOD fusionné introuvable : {merged_path}")
+    
+#     try:
+#         df = pd.read_csv(merged_path)
+
+#         client = get_mongo_client()
+#         coll = client["landing_db"]["gsod_raw"]
+
+#         records = df.to_dict(orient="records")
+#         if records:
+#             coll.delete_many({})
+#             coll.insert_many(records)
+#     except Exception as e:
+#         print(f"[GSOD] Erreur lors de l'insertion : {e}")
+#         raise e
+    
+#     return f"[GSOD] {len(records)} documents insérés"
+
+# def insert_gsod_into_mongo ():
+#     """
+#     Insère GSOD dans Mongo de façon ultra-optimisée :
+#     - Lecture en CHUNKS
+#     - Insert en batch
+#     - Logs réguliers
+#     - Pas de surcharge RAM
+#     """
+
+#     import pandas as pd
+#     import time
+
+#     merged_path = GSOD_RAW_DIR / "gsod_1980_1990.csv"
+#     if not merged_path.exists():
+#         raise FileNotFoundError(f"GSOD fusionné introuvable : {merged_path}")
+
+#     print(f"[GSOD] Lecture CHUNKED du fichier : {merged_path}")
+
+#     client = get_mongo_client()
+#     coll = client["landing_db"]["gsod_raw"]
+
+#     # on reset la collection
+#     print("[GSOD] Suppression des anciens documents…")
+#     coll.delete_many({})
+
+#     # KEY PERFORMANCE PARAMETERS
+#     CHUNK_SIZE = 50_000       # lignes lues par pandas
+#     BATCH_SIZE = 2_000        # lignes insérées d'un coup dans Mongo
+
+#     total_inserted = 0
+#     t0 = time.time()
+
+#     # Lecture stream du fichier
+#     for chunk_idx, chunk in enumerate(pd.read_csv(merged_path, chunksize=CHUNK_SIZE)):
+#         print(f"\n[GSOD] ===== CHUNK {chunk_idx} — {len(chunk)} lignes =====")
+
+#         # Convertir le chunk en dicts natifs Python
+#         records = chunk.to_dict(orient="records")
+
+#         # Insertion par batch
+#         for i in range(0, len(records), BATCH_SIZE):
+#             batch = records[i:i + BATCH_SIZE]
+#             coll.insert_many(batch)
+#             total_inserted += len(batch)
+
+#             print(f"[GSOD] Insert batch {i//BATCH_SIZE+1} : +{len(batch)} docs "
+#                   f"(total = {total_inserted})")
+
+#     dt = round(time.time() - t0, 2)
+#     print(f"\n[GSOD] FINI — {total_inserted} lignes insérées en {dt} sec")
+
+#     return f"[GSOD] {total_inserted} documents insérés dans landing_db.gsod_raw"
 def insert_gsod_into_mongo():
+    """
+    Ultra-fast GSOD insert:
+    - Lecture en CHUNKS
+    - Distribution multi-thread
+    - bulk_write pour performance max
+    - Logs très détaillés
+    """
     import pandas as pd
+    import time
+    from pymongo import InsertOne
+    from concurrent.futures import ThreadPoolExecutor
 
-    merged_path = GSOD_RAW_DIR / "gsod_1980_2000.csv"
-
+    merged_path = GSOD_RAW_DIR / "gsod_1980_1990.csv"
     if not merged_path.exists():
         raise FileNotFoundError(f"GSOD fusionné introuvable : {merged_path}")
 
-    df = pd.read_csv(merged_path)
+    print(f"[GSOD] CHUNKED + MULTITHREAD INSERT pour : {merged_path}")
 
     client = get_mongo_client()
     coll = client["landing_db"]["gsod_raw"]
 
-    records = df.to_dict(orient="records")
-    if records:
-        coll.delete_many({})
-        coll.insert_many(records)
+    print("[GSOD] Nettoyage collection…")
+    coll.delete_many({})
 
-    return f"[GSOD] {len(records)} documents insérés"
+    # PARAMÈTRES TURBO
+    CHUNK_SIZE = 50_000        # Lecture pandas
+    BATCH_SIZE = 5_000         # Insert per bulk_write
+    THREADS = 4                # 4 threads Mongo en parallèle
+
+    total_inserted = 0
+    t0 = time.time()
+
+    # Fonction envoyée aux threads
+    def insert_batch(batch_records):
+        try:
+            ops = [InsertOne(rec) for rec in batch_records]
+            coll.bulk_write(ops, ordered=False)
+            return len(batch_records)
+        except Exception as e:
+            print(f"[GSOD] Erreur bulk_write : {e}")
+            return 0
+
+    # ThreadPool pour insérer en parallèle
+    executor = ThreadPoolExecutor(max_workers=THREADS)
+
+    futures = []
+
+    # Lecture stream du CSV
+    for chunk_idx, chunk in enumerate(pd.read_csv(merged_path, chunksize=CHUNK_SIZE)):
+        print(f"\n[GSOD] --- CHUNK {chunk_idx} ({len(chunk)} lignes) ---")
+
+        records = chunk.to_dict(orient="records")
+
+        # Découpage en batch pour bulk_write
+        for i in range(0, len(records), BATCH_SIZE):
+            batch = records[i:i + BATCH_SIZE]
+
+            future = executor.submit(insert_batch, batch)
+            futures.append(future)
+
+        # Nettoyage mémoire
+        del records
+        del chunk
+
+        # Log
+        print(f"[GSOD] {len(futures)} batchs soumis au thread pool…")
+
+    # Attente du travail des threads
+    print("\n[GSOD] Attente de la fin des threads…")
+    for idx, f in enumerate(futures):
+        added = f.result()
+        total_inserted += added
+
+        if idx % 50 == 0:
+            print(f"[GSOD] Progress threads : batch #{idx}, total={total_inserted}")
+
+    executor.shutdown(wait=True)
+
+    dt = round(time.time() - t0, 2)
+    print(f"\n[GSOD] FINI : {total_inserted} documents insérés en {dt} sec.")
+
+    return f"[GSOD] {total_inserted} docs insérés dans landing_db.gsod_raw"
 
 
 # =====================================
