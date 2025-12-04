@@ -53,7 +53,7 @@ Dataset containing UFO reports with:
 - description text
 
 ## 2.2 NOAA GSOD (Global Surface Summary of the Day)  
-Kaggle: https://www.kaggle.com/datasets/noaa/gsod  
+NOOA: https://www.ncei.noaa.gov/data/global-summary-of-the-day/archive 
 
 Dataset with one row per **station × day**, including:
 - temperature (mean, min, max)
@@ -411,3 +411,4 @@ make check-airflow
 * **Nihal**
 * **Zineb**
 * **Junior**
+
