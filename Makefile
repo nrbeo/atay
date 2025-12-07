@@ -1,6 +1,9 @@
 init-airflow: # Initialize Airflow database and create admin user
 	docker-compose -f docker/docker-compose.yml up airflow-init
 
+build-airflow: # Build Airflow Docker images
+	docker-compose -f docker/docker-compose.yml build
+
 run-airflow: # Start Airflow services
 	docker-compose -f docker/docker-compose.yml up -d
 
