@@ -1,6 +1,8 @@
 # --- Core ---
 pandas==2.2.2
 numpy==1.26.4
+polars==0.20.16
+pyarrow==17.0.0
 
 # --- Airflow & PostgreSQL ---
 apache-airflow-providers-postgres==6.3.0
@@ -10,6 +12,7 @@ psycopg2-binary==2.9.9   # driver PostgreSQL
 tqdm>=4.66.4,<5.0.0
 python-dotenv>=1.0.1,<2.0.0
 kaggle>=1.5.16,<2.0.0
+scikit-learn==1.5.2
 
 # --- Bonus ---
 redis>=5.0.4,<6.0.0
