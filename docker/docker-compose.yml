@@ -70,6 +70,12 @@ services:
       - "${MONGO_PORT}:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: always
     networks:
       - atay_network
@@ -375,6 +381,42 @@ services:
 
     networks:
       - atay_network
+
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/backend/Dockerfile
+    container_name: atay_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../src/backend:/app/src/backend
+      - ../data:/app/data
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - atay_network
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: atay_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - atay_network
+
 
 networks:
   atay_network:
