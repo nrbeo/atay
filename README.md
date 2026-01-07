@@ -11,8 +11,10 @@ The repository implements a complete, production-style data engineering architec
 - **Apache Airflow** for pipeline orchestration  
 - **PostgreSQL** for persistent storage  
 - **PgAdmin** for database administration  
-- **Streamlit** for data visualization  
+- **FastAPI** backend API for data access  
+- **React + TypeScript** frontend for data visualization  
 - **Redis** as Airflow's Celery broker  
+- **MongoDB** available for document storage (optional)  
 - **Docker Compose** for containerization  
 - **Makefile** for development automation  
 
@@ -29,7 +31,7 @@ It implements a full data pipeline:
 1. **Ingestion** of raw datasets in the landing zone  
 2. **Staging**: cleaning, transformation, geospatial enrichment  
 3. **Curated zone**: building a star-schema data warehouse in PostgreSQL  
-4. **Visualization & Analytics** through SQL queries and Streamlit  
+4. **Visualization & Analytics** through React frontend and FastAPI backend  
 
 The final dataset enables answering questions such as:
 
@@ -84,56 +86,58 @@ Dataset with one row per **station × day**, including:
 
 ---
 
-# 4. Architecture
-
-A complete DE architecture is implemented using Docker Compose:
-
-```
-          ┌──────────────┐
-          │  Streamlit   │  ← Data visualization
-          └──────┬───────┘
-                 │
-                 ▼
-    ┌─────────────────────┐
-    │   Apache Airflow    │  ← Pipeline orchestration
-    │ (Scheduler, Worker) │
-    └────────┬────────────┘
-             │
-             ▼
-    ┌─────────────────────┐
-    │    PostgreSQL DB    │  ← Curated data warehouse
-    └────────┬────────────┘
-             │
-             ▼
-    ┌─────────────────────┐
-    │       Redis         │  ← Celery broker for Airflow
-    └─────────────────────┘
-```
-
-
 ## Services and Ports
 
 | Service        | Port   | Description                         |
 | -------------- | ------ | ----------------------------------- |
+| Frontend       | 3000   | React application (Vite)            |
+| Backend API    | 8000   | FastAPI with Swagger docs           |
 | Airflow UI     | 8080   | DAG management and monitoring       |
 | PgAdmin        | 5050   | PostgreSQL administration UI        |
-| Streamlit      | 8501   | Data exploration & visualizations   |
+| Mongo Express  | 8081   | MongoDB administration UI           |
 | PostgreSQL     | 5432   | Analytical database                 |
+| MongoDB        | 27017  | Document store (optional)           |
 | Redis          | 6379   | Celery message broker               |
 
 All services are fully containerized and managed through `docker-compose`.
 
 ---
 
-# 5. Data Pipeline Architecture
+# 4. Data Pipeline Architecture
 
 The pipeline implements the classic **Landing → Staging → Curated** architecture.
 
-## 5.1 Landing Zone
+## 4.1 Landing Zone
 - Stores raw UFO and GSOD datasets exactly as downloaded.
 - No transformation involved.
 
-## 5.2 Staging Zone
+### Design Decision: MongoDB vs. File-based Landing
+
+The architecture includes **MongoDB** as an optional document store for the landing zone. While the ingestion pipeline code to load raw data into MongoDB collections is fully implemented (see `etl/ingestion.py`), this feature has been **intentionally disabled** (commented out in `dag_ingestion.py`) for the following reasons:
+
+1. **Data Volume**: The GSOD dataset spans multiple decades and contains **millions of records** (50+ million rows when merged). Loading this into MongoDB document-by-document is extremely time-consuming.
+2. **Performance Trade-off**: For batch analytics pipelines, file-based storage (CSV/Parquet) offers better I/O performance than document retrieval from MongoDB.
+3. **Resource Constraints**: In a development/demo environment, MongoDB insertion adds significant overhead without proportional benefits for our analytical use case.
+4. **Pragmatic Choice**: The star-schema warehouse in PostgreSQL is the primary analytics target. MongoDB would only serve as an intermediate store, adding complexity without analytical value.
+
+> **Note**: The MongoDB service remains available in `docker-compose.yml` and the insertion code is preserved for scenarios requiring document-based access or real-time ingestion patterns.
+
+### Design Decision: Redis Caching (Not Implemented)
+
+The architecture includes a **Redis** container, initially intended to serve as a **caching layer** between the FastAPI backend and the React frontend. The goal was to:
+
+1. **Reduce database load**: Cache frequent queries (e.g., statistics, dimension lookups) to avoid redundant PostgreSQL hits.
+2. **Improve response times**: Serve cached JSON responses in milliseconds instead of running SQL aggregations.
+3. **Enable real-time features**: Support WebSocket subscriptions or live dashboard updates.
+
+**Why it was not implemented**:
+- **Time constraints**: Priority was given to completing the core ETL pipeline and star schema.
+- **Current performance acceptable**: With ~87,000 records, PostgreSQL queries remain fast enough for the demo.
+- **Future enhancement**: The Redis service is ready in `docker-compose.yml` and can be integrated using `redis-py` with FastAPI dependency injection.
+
+> Redis currently serves only as **Airflow's Celery broker** for task distribution. The caching functionality remains a planned enhancement.
+
+## 4.2 Staging Zone
 Cleaning and enrichment:
 
 ### UFO staging:
@@ -158,7 +162,7 @@ Cleaning and enrichment:
 
 The staging zone is persistent.
 
-## 5.3 Curated Zone (Data Warehouse)
+## 4.3 Curated Zone (Data Warehouse)
 Implements a star schema:
 
 ### Fact table:
@@ -171,9 +175,9 @@ SQL views are created for analysis (counts, trends, weather relationships).
 
 ---
 
-# 6. Star Schema
+# 5. Star Schema
 
-## 6.1 Fact Table: `FactUfoObservation`
+## 5.1 Fact Table: `FactUfoObservation`
 
 | Column | Description |
 |--------|-------------|
@@ -189,7 +193,7 @@ SQL views are created for analysis (counts, trends, weather relationships).
 | comment_length | Derived measure |
 | has_comment | Boolean |
 
-## 6.2 Dimensions
+## 5.2 Dimensions
 
 #### `DimDate`
 Contains year, month, day, weekday, season, etc.
@@ -213,7 +217,7 @@ Encodes combinations of weather phenomena from the FRSHTT bitmask:
 - label
 - blue_sky (true if all flags = 0)
 
-## 6.3 Text Table (Not in star schema)
+## 5.3 Text Table (Not in star schema)
 `UfoCommentsRaw`
 - `fact_id`
 - `comment_text` (raw NUFORC text)
@@ -222,7 +226,7 @@ Used for potential future NLP
 
 ---
 
-# 7. ERD (Mermaid)
+# 6. ERD (Mermaid)
 
 ```mermaid
 erDiagram
@@ -304,7 +308,7 @@ erDiagram
 
 ---
 
-# 8. Environment Setup
+# 7. Environment Setup
 
 ## Clone the repository
 
@@ -318,14 +322,20 @@ cd atay
 Copy the template file:
 
 ```bash
-cp docker/config/.env.example docker/config/.env
+cp config/.env.example docker/.env
+```
+
+For Linux/WSL, set your user ID:
+
+```bash
+echo "AIRFLOW_UID=$(id -u)" >> docker/.env
 ```
 
 Adjust values if needed (ports, database passwords, etc.).
 
 ---
 
-# 9. Running the Project (Makefile)
+# 8. Running the Project (Makefile)
 
 ### Initialize Airflow (first time only)
 
@@ -341,9 +351,10 @@ make run-airflow
 
 Services will be available at:
 
-* Airflow: [http://localhost:8080](http://localhost:8080)
-* Streamlit: [http://localhost:8501](http://localhost:8501)
-* PgAdmin: [http://localhost:5050](http://localhost:5050)
+* Airflow: [http://localhost:8080](http://localhost:8080) (airflow/airflow)
+* Frontend: [http://localhost:3000](http://localhost:3000)
+* Backend API: [http://localhost:8000/docs](http://localhost:8000/docs)
+* PgAdmin: [http://localhost:5050](http://localhost:5050) (admin@admin.com/root)
 
 ### Stop containers
 
@@ -363,18 +374,6 @@ make stop-with-volumes
 make clean
 ```
 
-### Run a local ETL script
-
-```
-make run-etl
-```
-
-### Launch Streamlit only
-
-```
-make run-app
-```
-
 ### Check container status
 
 ```
@@ -383,13 +382,44 @@ make check-airflow
 
 ---
 
-# 10. Technical Details
+## Running the Pipelines
 
-* **Airflow**: 3.1.0
-* **Python**: 3.13
-* **Docker Compose**: orchestrates Airflow, Postgres, Redis, PgAdmin, Streamlit
+Access Airflow UI at http://localhost:8080 (airflow/airflow) and trigger DAGs in order:
+
+### Option A: Offline Pipeline (recommended for evaluation)
+
+Raw data is **already included** in `data/raw/`. Use this option to run without internet:
+
+1. `dag_ingestion_offline` → Extracts and merges NOAA data (skip downloads)
+2. `dag_transformation` → Cleans and enriches data
+3. `dag_load_postgres` → Loads star schema to PostgreSQL
+
+> **Note**: The repository includes pre-downloaded data so the pipeline runs fully offline.
+
+### Option B: Full Pipeline (with downloads)
+
+If you want to re-download fresh data (requires internet + Kaggle API key):
+
+1. `dag_ingestion` → Downloads from Kaggle/NOAA (~30 min)
+2. `dag_transformation` → Cleans and enriches data
+3. `dag_load_postgres` → Loads star schema to PostgreSQL
+
+---
+
+# 9. Technical Details
+
+| Component | Technology |
+|-----------|------------|
+| **Orchestration** | Apache Airflow 3.1.0 |
+| **Backend** | FastAPI (Python 3.13) |
+| **Frontend** | React + TypeScript + Vite |
+| **Charts** | Recharts, Leaflet |
+| **Database** | PostgreSQL 16 |
+| **Message Broker** | Redis |
+| **Document Store** | MongoDB (optional) |
+| **Containerization** | Docker Compose |
+
 * **Data directories**:
-
   * `data/raw` – landing zone
   * `data/staging` – staging zone
   * `data/curated` – star schema tables
@@ -397,12 +427,104 @@ make check-airflow
 
 ---
 
-# 11. Best Practices
+# 9.1 Frontend Application
+
+The React frontend provides interactive visualizations at http://localhost:3000
+
+| Page | Route | Description |
+|------|-------|-------------|
+| **Map Explorer** | `/` | Interactive Leaflet map with UFO sighting markers |
+| **Dashboard** | `/dashboard` | KPIs, time series, shape/season distributions |
+| **Climate Analysis** | `/climate` | Weather × UFO correlations (temperature, visibility) |
+| **Observations** | `/observations` | Searchable table of all sightings |
+| **Dimensions** | `/dimensions` | Browse dimension tables (shapes, locations, stations) |
+| **About** | `/about` | Project information |
+
+---
+
+# 9.2 Backend API
+
+FastAPI backend with auto-generated documentation at http://localhost:8000/docs
+
+### Main Endpoints
+
+| Category | Endpoints |
+|----------|----------|
+| **Meta** | `/meta/health`, `/meta/tables`, `/meta/row-counts` |
+| **Dimensions** | `/dimensions/shapes`, `/dimensions/locations`, `/dimensions/weather-stations` |
+| **UFO** | `/ufo/observations`, `/ufo/observations/{id}/detail`, `/ufo/map/points` |
+| **Statistics** | `/stats/overview`, `/stats/by-season`, `/stats/by-shape`, `/stats/time-series/monthly` |
+| **Climate** | `/stats/by-temperature`, `/stats/by-visibility`, `/stats/shape-by-weather` |
+
+---
+
+# 10. Best Practices
 
 * Use `make stop-with-volumes` for a full Airflow reset.
 * DAGs are located in `src/dags/`. Any new DAG requires restarting Airflow.
 * Use staging tables for data quality checks before loading curated data.
 * Keep raw data immutable in `data/raw/`.
+
+---
+
+# 11. Data Governance
+
+This section discusses key data governance principles applied to the project.
+
+## 11.1 Data Quality
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Completeness** | Null values are handled explicitly: missing coordinates, durations, or dates lead to row exclusion or imputation. |
+| **Consistency** | Date formats are standardized; sentinel values (9999.9, 99.99) in GSOD are replaced with `NULL`. |
+| **Accuracy** | Geospatial enrichment uses Haversine distance to match UFO sightings to the nearest *active* weather station on the observation date. |
+| **Timeliness** | Raw data is versioned by ingestion date; staging transformations are idempotent and reproducible. |
+
+## 11.2 Data Lineage
+
+The pipeline maintains clear **data lineage** through:
+
+- **Zone separation**: `raw/` → `staging/` → `curated/` directories with no in-place modifications.
+- **Airflow task logs**: Each task execution is logged, enabling traceability of when and how data was transformed.
+- **Immutable raw data**: Landing zone files are never modified after ingestion.
+
+## 11.3 Data Privacy & Ethics
+
+| Concern | Mitigation |
+|---------|------------|
+| **PII in comments** | UFO reports may contain witness names or locations. Comments are stored separately (`UfoCommentsRaw`) and excluded from analytical views by default. |
+| **Location precision** | Latitude/longitude are rounded to city-level precision in dimension tables. |
+| **No user tracking** | The pipeline processes historical public datasets; no personal identifiers are collected or stored. |
+
+## 11.4 Data Security
+
+- **Environment variables**: Database credentials are stored in `.env` files (excluded from version control via `.gitignore`).
+- **Network isolation**: All services run in a dedicated Docker network (`atay_network`), limiting external exposure.
+- **Role separation**: PostgreSQL uses distinct databases for Airflow metadata (`atay`) and the data warehouse (`atay_dw`).
+
+## 11.5 Data Retention & Lifecycle
+
+| Zone | Retention Policy |
+|------|------------------|
+| **Landing** | Retained indefinitely for reproducibility; can be regenerated from source. |
+| **Staging** | Persistent; rebuilt on schema changes. |
+| **Curated** | Production-ready; backed by PostgreSQL with optional pg_dump exports. |
+
+## 11.6 Compliance Considerations
+
+While this project uses publicly available datasets, a production deployment would need to address:
+
+- **GDPR**: If processing EU citizen data, ensure right to erasure for any PII in comments.
+- **Data licensing**: NUFORC data is public domain; NOAA GSOD is US government open data.
+- **Audit trails**: Airflow's built-in logging provides basic audit capabilities; production systems may require enhanced logging to SIEM tools.
+
+---
+
+# 12. Project Poster
+
+A visual summary of the project architecture and findings is available:
+
+![Project Poster](./docs/Poster.png)
 
 ---
 
