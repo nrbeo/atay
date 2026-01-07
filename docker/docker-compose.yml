@@ -361,26 +361,28 @@ services:
     networks:
       - atay_network
       
-  # streamlit:
-  #   build:
-  #     context: ../
-  #     dockerfile: docker/streamlit/Dockerfile
-  #   container_name: atay_streamlit
-  #   command: streamlit run src/app/main.py --server.port=${STREAMLIT_PORT} --server.address=0.0.0.0
-  #   ports:
-  #     - "${STREAMLIT_PORT}:${STREAMLIT_PORT}"
-  #   volumes:
-  #     - ../src/app:/app/src/app
-  #     - ../data:/app/data
-  #   environment:
-  #     - PYTHONUNBUFFERED=1
-  #     - STREAMLIT_PORT=${STREAMLIT_PORT}
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-
-  #   networks:
-  #     - atay_network
+  streamlit:
+    build:
+      context: ../
+      dockerfile: docker/streamlit/Dockerfile
+    container_name: atay_streamlit
+    command: streamlit run src/app/Home.py --server.port=${STREAMLIT_PORT} --server.address=0.0.0.0
+    ports:
+      - "${STREAMLIT_PORT}:${STREAMLIT_PORT}"
+    volumes:
+      - ../src/app:/app/src/app
+      - ../data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_PORT=${STREAMLIT_PORT}
+      - API_URL=http://backend:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - atay_network
 
   backend:
     build:

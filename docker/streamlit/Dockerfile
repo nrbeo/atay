@@ -23,5 +23,10 @@ COPY data ./data
 # Exposer le port
 EXPOSE ${STREAMLIT_PORT}
 
-# Lancer Streamlit
-CMD ["streamlit", "run", "src/app/main.py", "--server.port=${STREAMLIT_PORT}", "--server.address=0.0.0.0"]
+# Variables d'environnement pour Streamlit
+ENV STREAMLIT_SERVER_PORT=${STREAMLIT_PORT}
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+ENV API_URL=http://backend:8000
+
+# Lancer Streamlit avec Home.py comme point d'entrée
+CMD ["streamlit", "run", "src/app/Home.py", "--server.port=8501", "--server.address=0.0.0.0"]

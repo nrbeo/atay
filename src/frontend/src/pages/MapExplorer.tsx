@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MapPin, Flame, Filter, X, Eye, Radar, LayoutDashboard, Shapes, Info, Loader2 } from 'lucide-react';
+import { MapPin, Flame, Filter, X, Eye, Radar, LayoutDashboard, Shapes, Info, Loader2, CloudSun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
@@ -272,6 +272,13 @@ export default function MapExplorer() {
         >
           <LayoutDashboard className="w-4 h-4" />
           Dashboard
+        </Link>
+        <Link 
+          to="/climate" 
+          className="glass-card px-4 py-2 rounded-lg text-sm hover:bg-secondary/50 transition-colors flex items-center gap-2"
+        >
+          <CloudSun className="w-4 h-4" />
+          Climate Analysis
         </Link>
         <Link 
           to="/observations" 

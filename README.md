@@ -13,6 +13,7 @@ The repository implements a complete, production-style data engineering architec
 - **PgAdmin** for database administration  
 - **FastAPI** backend API for data access  
 - **React + TypeScript** frontend for data visualization  
+- **Streamlit** alternative Python dashboard for data analysis  
 - **Redis** as Airflow's Celery broker  
 - **MongoDB** available for document storage (optional)  
 - **Docker Compose** for containerization  
@@ -91,6 +92,7 @@ Dataset with one row per **station × day**, including:
 | Service        | Port   | Description                         |
 | -------------- | ------ | ----------------------------------- |
 | Frontend       | 3000   | React application (Vite)            |
+| Streamlit      | 8501   | Streamlit dashboard (Python)        |
 | Backend API    | 8000   | FastAPI with Swagger docs           |
 | Airflow UI     | 8080   | DAG management and monitoring       |
 | PgAdmin        | 5050   | PostgreSQL administration UI        |
@@ -352,7 +354,8 @@ make run-airflow
 Services will be available at:
 
 * Airflow: [http://localhost:8080](http://localhost:8080) (airflow/airflow)
-* Frontend: [http://localhost:3000](http://localhost:3000)
+* Frontend (React): [http://localhost:3000](http://localhost:3000)
+* Frontend (Streamlit): [http://localhost:8501](http://localhost:8501)
 * Backend API: [http://localhost:8000/docs](http://localhost:8000/docs)
 * PgAdmin: [http://localhost:5050](http://localhost:5050) (admin@admin.com/root)
 
@@ -412,8 +415,9 @@ If you want to re-download fresh data (requires internet + Kaggle API key):
 |-----------|------------|
 | **Orchestration** | Apache Airflow 3.1.0 |
 | **Backend** | FastAPI (Python 3.13) |
-| **Frontend** | React + TypeScript + Vite |
-| **Charts** | Recharts, Leaflet |
+| **Frontend (React)** | React + TypeScript + Vite |
+| **Frontend (Streamlit)** | Streamlit + Plotly + PyDeck |
+| **Charts** | Recharts, Leaflet, Plotly |
 | **Database** | PostgreSQL 16 |
 | **Message Broker** | Redis |
 | **Document Store** | MongoDB (optional) |
@@ -442,7 +446,75 @@ The React frontend provides interactive visualizations at http://localhost:3000
 
 ---
 
-# 9.2 Backend API
+# 9.2 Streamlit Dashboard
+
+An alternative data-focused dashboard built with **Streamlit** is available at http://localhost:8501
+
+### Features
+
+The Streamlit app provides a Python-native analytics interface equivalent to the React frontend, focused purely on data exploration and analysis.
+
+### Pages
+
+| Page | Icon | Description |
+|------|------|-------------|
+| **Home** | 👽 | Welcome page with project overview and quick stats |
+| **Dashboard** | 📊 | KPIs, temporal trends, shape/season distributions, top countries |
+| **Map Explorer** | 🗺️ | Interactive PyDeck map with markers/heatmap modes |
+| **Observations** | 👁️ | Paginated table with filters (city, country, shape, dates) |
+| **Climate Analysis** | 🌡️ | Temperature/visibility correlations, radar charts by season |
+| **Dimensions** | 📦 | Explore all dimension tables (Shapes, FRSHTT, Locations, Stations) |
+
+### Technical Stack
+
+| Component | Technology |
+|-----------|------------|
+| **Framework** | Streamlit 1.41+ |
+| **Mapping** | PyDeck (Deck.gl) |
+| **Charts** | Plotly Express |
+| **Data** | Pandas DataFrames |
+| **API Client** | Requests (to FastAPI backend) |
+
+### Running Streamlit
+
+**With Docker (recommended):**
+```bash
+cd docker
+docker compose up -d streamlit backend postgres
+```
+
+**Locally (development):**
+```bash
+cd src/app
+pip install -r ../../docker/streamlit/requirements.txt
+export API_URL=http://localhost:8000
+streamlit run Home.py --server.port 8501
+```
+
+### File Structure
+
+```
+src/app/
+├── Home.py                      # Main entry point
+├── api_client.py                # API client (shared with all pages)
+├── pages/
+│   ├── Dashboard.py        # Analytics dashboard
+│   ├── Map_Explorer.py     # Interactive map
+│   ├── Observations.py     # Data browser
+│   ├── Climate_Analysis.py # Weather correlations
+│   └── Dimensions.py       # Dimension explorer
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_URL` | `http://localhost:8000` | Backend API URL (Docker: `http://backend:8000`) |
+| `STREAMLIT_PORT` | `8501` | Streamlit server port |
+
+---
+
+# 9.3 Backend API
 
 FastAPI backend with auto-generated documentation at http://localhost:8000/docs
 
