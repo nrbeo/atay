@@ -179,3 +179,140 @@ class TableRowCount(BaseModel):
                 "row_count": 87459
             }
         }
+
+
+# =============================================================================
+# CLIMATE × UFO CORRELATION SCHEMAS
+# =============================================================================
+
+class ShapeWeatherStat(BaseModel):
+    """Shape distribution grouped by weather condition."""
+    
+    shape: str = Field(..., description="UFO shape name")
+    weather_label: Optional[str] = Field(None, description="Weather condition label")
+    fog: bool = Field(False, description="Fog present")
+    rain: bool = Field(False, description="Rain present")
+    snow: bool = Field(False, description="Snow present")
+    thunder: bool = Field(False, description="Thunder present")
+    blue_sky: bool = Field(False, description="Clear/blue sky")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "shape": "light",
+                "weather_label": "clear / blue sky",
+                "fog": False,
+                "rain": False,
+                "snow": False,
+                "thunder": False,
+                "blue_sky": True,
+                "sightings": 12000
+            }
+        }
+
+
+class ShapeSeasonStat(BaseModel):
+    """Shape distribution grouped by season."""
+    
+    shape: str = Field(..., description="UFO shape name")
+    season: str = Field(..., description="Season (winter, spring, summer, fall)")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "shape": "light",
+                "season": "summer",
+                "sightings": 5000
+            }
+        }
+
+
+class DurationWeatherStat(BaseModel):
+    """Average duration grouped by weather condition."""
+    
+    weather_label: Optional[str] = Field(None, description="Weather condition label")
+    blue_sky: bool = Field(False, description="Clear/blue sky")
+    avg_duration_seconds: float = Field(..., description="Average duration in seconds")
+    avg_duration_minutes: float = Field(..., description="Average duration in minutes")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "weather_label": "clear / blue sky",
+                "blue_sky": True,
+                "avg_duration_seconds": 420.5,
+                "avg_duration_minutes": 7.01,
+                "sightings": 45000
+            }
+        }
+
+
+class TemperatureStat(BaseModel):
+    """Sightings grouped by temperature range."""
+    
+    temp_bucket: str = Field(..., description="Temperature range label")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    avg_duration_min: Optional[float] = Field(None, description="Average duration in minutes")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "temp_bucket": "20-30°C (Warm)",
+                "sightings": 15000,
+                "avg_duration_min": 8.5
+            }
+        }
+
+
+class VisibilityStat(BaseModel):
+    """Sightings grouped by visibility range."""
+    
+    visibility_bucket: str = Field(..., description="Visibility range label")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    avg_duration_min: Optional[float] = Field(None, description="Average duration in minutes")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "visibility_bucket": "> 10 mi (Good)",
+                "sightings": 30000,
+                "avg_duration_min": 6.2
+            }
+        }
+
+
+class TopShapeWeatherStat(BaseModel):
+    """Top shapes for each weather condition."""
+    
+    weather_label: Optional[str] = Field(None, description="Weather condition label")
+    shape: str = Field(..., description="UFO shape name")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "weather_label": "clear / blue sky",
+                "shape": "light",
+                "sightings": 12000
+            }
+        }
+
+
+class SeasonWeatherStat(BaseModel):
+    """Sightings by season and weather combination."""
+    
+    season: str = Field(..., description="Season (winter, spring, summer, fall)")
+    weather_label: Optional[str] = Field(None, description="Weather condition label")
+    sightings: int = Field(..., ge=0, description="Number of sightings")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "season": "summer",
+                "weather_label": "clear / blue sky",
+                "sightings": 18000
+            }
+        }

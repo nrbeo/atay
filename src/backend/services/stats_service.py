@@ -180,6 +180,80 @@ class StatsService:
             counts[table] = row["count"] if row else 0
         return counts
 
+    # =========================================================================
+    # CLIMATE × UFO CORRELATION METHODS
+    # =========================================================================
+    
+    @staticmethod
+    def get_shape_by_weather() -> List[Dict[str, Any]]:
+        """
+        Get shape distribution grouped by weather condition.
+        
+        Returns:
+            List of dictionaries with shape, weather condition, and sighting count.
+        """
+        return fetch_all(sql.STATS_SHAPE_BY_WEATHER)
+    
+    @staticmethod
+    def get_shape_by_season() -> List[Dict[str, Any]]:
+        """
+        Get shape distribution grouped by season.
+        
+        Returns:
+            List of dictionaries with shape, season, and sighting count.
+        """
+        return fetch_all(sql.STATS_SHAPE_BY_SEASON)
+    
+    @staticmethod
+    def get_duration_by_weather() -> List[Dict[str, Any]]:
+        """
+        Get average sighting duration grouped by weather condition.
+        
+        Returns:
+            List of dictionaries with weather condition and average duration.
+        """
+        return fetch_all(sql.STATS_DURATION_BY_WEATHER)
+    
+    @staticmethod
+    def get_by_temperature() -> List[Dict[str, Any]]:
+        """
+        Get sighting counts grouped by temperature ranges.
+        
+        Returns:
+            List of dictionaries with temperature bucket and sighting count.
+        """
+        return fetch_all(sql.STATS_BY_TEMPERATURE)
+    
+    @staticmethod
+    def get_by_visibility() -> List[Dict[str, Any]]:
+        """
+        Get sighting counts grouped by visibility ranges.
+        
+        Returns:
+            List of dictionaries with visibility bucket and sighting count.
+        """
+        return fetch_all(sql.STATS_BY_VISIBILITY)
+    
+    @staticmethod
+    def get_top_shapes_by_weather() -> List[Dict[str, Any]]:
+        """
+        Get top 5 shapes for each weather condition.
+        
+        Returns:
+            List of dictionaries with weather condition, shape, and sighting count.
+        """
+        return fetch_all(sql.STATS_TOP_SHAPES_BY_WEATHER)
+    
+    @staticmethod
+    def get_season_weather_matrix() -> List[Dict[str, Any]]:
+        """
+        Get sightings grouped by season and weather combination.
+        
+        Returns:
+            List of dictionaries with season, weather condition, and sighting count.
+        """
+        return fetch_all(sql.STATS_SEASON_WEATHER_MATRIX)
+
 
 # Singleton instance for convenience
 stats_service = StatsService()

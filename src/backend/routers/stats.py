@@ -14,12 +14,19 @@ from fastapi import APIRouter, Query
 
 from ..schemas import (
     DurationBucket,
+    DurationWeatherStat,
     OverviewStats,
     SeasonStat,
+    SeasonWeatherStat,
+    ShapeSeasonStat,
     ShapeStat,
+    ShapeWeatherStat,
+    TemperatureStat,
     TimeSeriesPoint,
     TopCountry,
     TopLocation,
+    TopShapeWeatherStat,
+    VisibilityStat,
     WeatherStat,
     YearStat,
 )
@@ -253,3 +260,174 @@ def get_duration_distribution() -> List[DurationBucket]:
         List of DurationBucket objects with duration range label and count.
     """
     return stats_service.get_duration_distribution()
+
+
+# =============================================================================
+# CLIMATE × UFO CORRELATION ENDPOINTS
+# =============================================================================
+
+@router.get(
+    "/shape-by-weather",
+    response_model=List[ShapeWeatherStat],
+    summary="Get shapes by weather condition",
+    description="""
+    Retrieve UFO shape distribution grouped by weather condition (FRSHTT pattern).
+    
+    Useful for analyzing which shapes are most commonly reported under specific
+    weather conditions (fog, rain, clear sky, etc.).
+    """,
+    response_description="Shape distribution by weather condition",
+    tags=["climate-correlation"],
+)
+def get_shape_by_weather() -> List[ShapeWeatherStat]:
+    """
+    Get shape distribution by weather condition.
+    
+    Returns:
+        List of ShapeWeatherStat objects with shape, weather flags, and sighting count.
+    """
+    return stats_service.get_shape_by_weather()
+
+
+@router.get(
+    "/shape-by-season",
+    response_model=List[ShapeSeasonStat],
+    summary="Get shapes by season",
+    description="""
+    Retrieve UFO shape distribution grouped by season.
+    
+    Useful for analyzing whether certain shapes are more commonly reported
+    in specific seasons (summer vs winter, etc.).
+    """,
+    response_description="Shape distribution by season",
+    tags=["climate-correlation"],
+)
+def get_shape_by_season() -> List[ShapeSeasonStat]:
+    """
+    Get shape distribution by season.
+    
+    Returns:
+        List of ShapeSeasonStat objects with shape, season, and sighting count.
+    """
+    return stats_service.get_shape_by_season()
+
+
+@router.get(
+    "/duration-by-weather",
+    response_model=List[DurationWeatherStat],
+    summary="Get average duration by weather",
+    description="""
+    Retrieve average sighting duration grouped by weather condition.
+    
+    Useful for analyzing whether sightings last longer under certain
+    weather conditions (e.g., clear sky vs fog).
+    """,
+    response_description="Duration statistics by weather condition",
+    tags=["climate-correlation"],
+)
+def get_duration_by_weather() -> List[DurationWeatherStat]:
+    """
+    Get average duration by weather condition.
+    
+    Returns:
+        List of DurationWeatherStat objects with weather, avg duration, and count.
+    """
+    return stats_service.get_duration_by_weather()
+
+
+@router.get(
+    "/by-temperature",
+    response_model=List[TemperatureStat],
+    summary="Get sightings by temperature range",
+    description="""
+    Retrieve UFO sighting counts grouped by temperature ranges.
+    
+    Temperature buckets (Fahrenheit converted to Celsius labels):
+    - < 0°C (Freezing): Below 32°F
+    - 0-10°C (Cold): 32-50°F
+    - 10-20°C (Mild): 50-68°F  
+    - 20-30°C (Warm): 68-86°F
+    - > 30°C (Hot): Above 86°F
+    """,
+    response_description="Sighting counts by temperature range",
+    tags=["climate-correlation"],
+)
+def get_by_temperature() -> List[TemperatureStat]:
+    """
+    Get sighting distribution by temperature.
+    
+    Returns:
+        List of TemperatureStat objects with temp range and sighting count.
+    """
+    return stats_service.get_by_temperature()
+
+
+@router.get(
+    "/by-visibility",
+    response_model=List[VisibilityStat],
+    summary="Get sightings by visibility range",
+    description="""
+    Retrieve UFO sighting counts grouped by visibility ranges.
+    
+    Visibility buckets:
+    - < 1 mi (Poor): Very low visibility
+    - 1-5 mi (Low): Low visibility
+    - 5-10 mi (Medium): Medium visibility
+    - > 10 mi (Good): Good visibility
+    """,
+    response_description="Sighting counts by visibility range",
+    tags=["climate-correlation"],
+)
+def get_by_visibility() -> List[VisibilityStat]:
+    """
+    Get sighting distribution by visibility.
+    
+    Returns:
+        List of VisibilityStat objects with visibility range and sighting count.
+    """
+    return stats_service.get_by_visibility()
+
+
+@router.get(
+    "/top-shapes-by-weather",
+    response_model=List[TopShapeWeatherStat],
+    summary="Get top 5 shapes per weather condition",
+    description="""
+    Retrieve the top 5 most reported UFO shapes for each weather condition.
+    
+    Useful for identifying which shapes dominate under specific weather patterns.
+    """,
+    response_description="Top shapes for each weather condition",
+    tags=["climate-correlation"],
+)
+def get_top_shapes_by_weather() -> List[TopShapeWeatherStat]:
+    """
+    Get top 5 shapes for each weather condition.
+    
+    Returns:
+        List of TopShapeWeatherStat objects grouped by weather condition.
+    """
+    return stats_service.get_top_shapes_by_weather()
+
+
+@router.get(
+    "/season-weather-matrix",
+    response_model=List[SeasonWeatherStat],
+    summary="Get season × weather matrix",
+    description="""
+    Retrieve UFO sighting counts for each combination of season and weather condition.
+    
+    Useful for building a heatmap showing how sightings distribute across
+    the season/weather matrix.
+    """,
+    response_description="Season and weather combination statistics",
+    tags=["climate-correlation"],
+)
+def get_season_weather_matrix() -> List[SeasonWeatherStat]:
+    """
+    Get sightings by season and weather combination.
+    
+    Returns:
+        List of SeasonWeatherStat objects with season, weather, and sighting count.
+    """
+    return stats_service.get_season_weather_matrix()
