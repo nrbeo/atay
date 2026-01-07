@@ -82,6 +82,15 @@ export const stats = {
   timeSeriesMonthly: (params?: { country?: string; shape_key?: number }) =>
     api.get('/stats/time-series/monthly', { params }),
   durationDistribution: () => api.get('/stats/duration-distribution'),
+  
+  // Climate × UFO correlation endpoints
+  shapeByWeather: () => api.get('/stats/shape-by-weather'),
+  shapeBySeasonData: () => api.get('/stats/shape-by-season'),
+  durationByWeather: () => api.get('/stats/duration-by-weather'),
+  byTemperature: () => api.get('/stats/by-temperature'),
+  byVisibility: () => api.get('/stats/by-visibility'),
+  topShapesByWeather: () => api.get('/stats/top-shapes-by-weather'),
+  seasonWeatherMatrix: () => api.get('/stats/season-weather-matrix'),
 };
 
 export default api;

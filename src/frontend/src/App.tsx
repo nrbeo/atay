@@ -8,6 +8,7 @@ import MapExplorer from "./pages/MapExplorer";
 import Dashboard from "./pages/Dashboard";
 import Observations from "./pages/Observations";
 import Dimensions from "./pages/Dimensions";
+import ClimateAnalysis from "./pages/ClimateAnalysis";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +51,14 @@ const App = () => (
             element={
               <MainLayout>
                 <Dimensions />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/climate"
+            element={
+              <MainLayout>
+                <ClimateAnalysis />
               </MainLayout>
             }
           />

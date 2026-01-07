@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Radar,
+  CloudSun,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button';
 const navItems = [
   { to: '/', icon: Map, label: 'Map Explorer' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/climate', icon: CloudSun, label: 'Climate Analysis' },
   { to: '/observations', icon: Eye, label: 'Observations' },
   { to: '/dimensions', icon: Shapes, label: 'Dimensions' },
   { to: '/about', icon: Info, label: 'About' },
