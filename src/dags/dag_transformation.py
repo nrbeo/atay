@@ -16,6 +16,18 @@ from etl.transformation import (
     build_star_schema_csv,
 )
 
+# =========================================================================
+# MONGODB EXTRACTION IMPORTS (ALTERNATIVE)
+# =========================================================================
+# Uncomment these imports to use MongoDB as the landing zone instead of CSV.
+# See etl/transformation.py for the function implementations.
+#
+# from etl.transformation import (
+#     extract_ufo_from_mongo,
+#     extract_gsod_from_mongo,
+# )
+# =========================================================================
+
 default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
@@ -41,6 +53,22 @@ with DAG(
         python_callable=extract_ufo_landing,
     )
 
+    # -------------------------------------------------------------------------
+    # ALTERNATIVE: Extract UFO from MongoDB instead of CSV
+    # -------------------------------------------------------------------------
+    # This task extracts UFO data from MongoDB landing zone (landing_db.ufo_raw)
+    # instead of reading from the raw CSV file. Useful when MongoDB is used
+    # as the primary landing store for real-time ingestion scenarios.
+    #
+    # To enable: comment out t_extract_ufo above, uncomment t_extract_ufo_mongo,
+    # and update the DAG dependencies to use t_extract_ufo_mongo.
+    # -------------------------------------------------------------------------
+    # t_extract_ufo_mongo = PythonOperator(
+    #     task_id="extract_ufo_from_mongo",
+    #     python_callable=extract_ufo_from_mongo,
+    # )
+    # -------------------------------------------------------------------------
+
     t_clean_ufo = PythonOperator(
         task_id="clean_ufo_staging",
         python_callable=clean_ufo_staging,
@@ -59,6 +87,27 @@ with DAG(
         task_id="extract_gsod_landing",
         python_callable=extract_gsod_landing,
     )
+
+    # -------------------------------------------------------------------------
+    # ALTERNATIVE: Extract GSOD from MongoDB instead of CSV
+    # -------------------------------------------------------------------------
+    # This task extracts GSOD weather data from MongoDB landing zone
+    # (landing_db.gsod_raw) instead of reading from the merged CSV file.
+    #
+    # WARNING: This is VERY SLOW for large datasets. The GSOD dataset contains
+    # 50+ million records spanning 1980-1990. Extracting from MongoDB
+    # document-by-document is significantly slower than reading a CSV file.
+    # This option is preserved to demonstrate MongoDB integration capability.
+    #
+    # To enable: comment out t_extract_gsod above, uncomment t_extract_gsod_mongo,
+    # and update the DAG dependencies to use t_extract_gsod_mongo.
+    # -------------------------------------------------------------------------
+    # t_extract_gsod_mongo = PythonOperator(
+    #     task_id="extract_gsod_from_mongo",
+    #     python_callable=extract_gsod_from_mongo,
+    #     execution_timeout=timedelta(hours=6),  # Extended timeout for large dataset
+    # )
+    # -------------------------------------------------------------------------
 
     t_clean_gsod = PythonOperator(
         task_id="clean_gsod_staging",
