@@ -1,3 +1,4 @@
+
 """
 TRANSFORMATION PIPELINE (Pipeline 2)
 ===================================
@@ -23,6 +24,156 @@ CURATED_DATA_PATH = BASE_DATA_PATH / "curated"
 
 STAGING_DATA_PATH.mkdir(parents=True, exist_ok=True)
 CURATED_DATA_PATH.mkdir(parents=True, exist_ok=True)
+
+
+# ===================================================================
+# ============  MONGODB EXTRACTION FUNCTIONS (ALTERNATIVE)  =========
+# ===================================================================
+#
+# These functions extract data from MongoDB instead of CSV files.
+# They are commented out because loading large datasets (50M+ rows for GSOD)
+# into MongoDB is extremely time-consuming and not practical for batch analytics.
+#
+# The code is preserved to demonstrate that the architecture supports
+# MongoDB as an alternative landing zone for scenarios requiring:
+#   - Document-based access patterns
+#   - Real-time ingestion with immediate queryability
+#   - Schema flexibility for heterogeneous data
+#
+# To use MongoDB as landing zone:
+#   1. Uncomment insert_ufo_into_mongo / insert_gsod_into_mongo in dag_ingestion.py
+#   2. Uncomment extract_ufo_from_mongo / extract_gsod_from_mongo below
+#   3. Uncomment corresponding tasks in dag_transformation.py
+#   4. Replace extract_ufo_landing / extract_gsod_landing tasks with MongoDB versions
+# ===================================================================
+
+# def get_mongo_client():
+#     """
+#     Returns a MongoDB client connected to the landing database.
+#     Credentials are read from environment variables.
+#     """
+#     from pymongo import MongoClient
+#
+#     user = os.getenv("MONGO_INITDB_ROOT_USERNAME", "mongoadmin")
+#     pwd = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "mongopwd")
+#     host = os.getenv("MONGO_HOST", "mongo")
+#     port = int(os.getenv("MONGO_PORT", "27017"))
+#     uri = f"mongodb://{user}:{pwd}@{host}:{port}/"
+#     return MongoClient(uri)
+
+
+# def extract_ufo_from_mongo():
+#     """
+#     Alternative UFO extraction from MongoDB landing zone.
+#     ----------------------------------------------------
+#     Reads UFO documents from MongoDB collection 'landing_db.ufo_raw'
+#     and exports them to staging as CSV:
+#         MongoDB (landing_db.ufo_raw) -> staging/ufo_extracted.csv
+#
+#     This function mirrors extract_ufo_landing() but sources data from
+#     MongoDB instead of the raw CSV file.
+#     """
+#     import pandas as pd
+#
+#     out_path = STAGING_DATA_PATH / "ufo_extracted.csv"
+#
+#     print("[UFO-MONGO] Connecting to MongoDB...")
+#     client = get_mongo_client()
+#     coll = client["landing_db"]["ufo_raw"]
+#
+#     # Count documents for logging
+#     doc_count = coll.count_documents({})
+#     print(f"[UFO-MONGO] Found {doc_count} documents in landing_db.ufo_raw")
+#
+#     if doc_count == 0:
+#         raise RuntimeError("[UFO-MONGO] No documents in MongoDB collection. Run ingestion first.")
+#
+#     # Fetch all documents (excluding MongoDB _id field)
+#     print("[UFO-MONGO] Fetching documents...")
+#     cursor = coll.find({}, {"_id": 0})
+#     records = list(cursor)
+#
+#     # Convert to DataFrame and save as CSV
+#     df = pd.DataFrame(records)
+#     df.to_csv(out_path, index=False)
+#
+#     print(f"[UFO-MONGO] Extract OK: {len(df)} rows -> {out_path}")
+#     client.close()
+#
+#     return f"[UFO-MONGO] Extracted {len(df)} rows from MongoDB"
+
+
+# def extract_gsod_from_mongo():
+#     """
+#     Alternative GSOD extraction from MongoDB landing zone.
+#     ------------------------------------------------------
+#     Reads GSOD documents from MongoDB collection 'landing_db.gsod_raw'
+#     and exports them to staging as CSV:
+#         MongoDB (landing_db.gsod_raw) -> staging/gsod_extracted.csv
+#
+#     This function mirrors extract_gsod_landing() but sources data from
+#     MongoDB instead of the raw CSV file.
+#
+#     WARNING: This is very slow for large datasets (50M+ documents).
+#     The function uses batched cursor iteration to avoid memory issues.
+#     """
+#     import pandas as pd
+#
+#     out_path = STAGING_DATA_PATH / "gsod_extracted.csv"
+#
+#     print("[GSOD-MONGO] Connecting to MongoDB...")
+#     client = get_mongo_client()
+#     coll = client["landing_db"]["gsod_raw"]
+#
+#     # Count documents for logging
+#     doc_count = coll.count_documents({})
+#     print(f"[GSOD-MONGO] Found {doc_count} documents in landing_db.gsod_raw")
+#
+#     if doc_count == 0:
+#         raise RuntimeError("[GSOD-MONGO] No documents in MongoDB collection. Run ingestion first.")
+#
+#     # Stream documents in batches to avoid memory overflow
+#     BATCH_SIZE = 100_000
+#     first_write = True
+#     total_written = 0
+#
+#     print(f"[GSOD-MONGO] Streaming extraction in batches of {BATCH_SIZE}...")
+#
+#     # Use cursor with no_cursor_timeout for long operations
+#     cursor = coll.find({}, {"_id": 0}).batch_size(BATCH_SIZE)
+#
+#     batch_records = []
+#     for doc in cursor:
+#         batch_records.append(doc)
+#
+#         if len(batch_records) >= BATCH_SIZE:
+#             df_batch = pd.DataFrame(batch_records)
+#             df_batch.to_csv(
+#                 out_path,
+#                 mode="w" if first_write else "a",
+#                 header=first_write,
+#                 index=False
+#             )
+#             total_written += len(batch_records)
+#             first_write = False
+#             batch_records = []
+#             print(f"[GSOD-MONGO] Written {total_written} rows...")
+#
+#     # Write remaining records
+#     if batch_records:
+#         df_batch = pd.DataFrame(batch_records)
+#         df_batch.to_csv(
+#             out_path,
+#             mode="w" if first_write else "a",
+#             header=first_write,
+#             index=False
+#         )
+#         total_written += len(batch_records)
+#
+#     print(f"[GSOD-MONGO] Extract OK: {total_written} rows -> {out_path}")
+#     client.close()
+#
+#     return f"[GSOD-MONGO] Extracted {total_written} rows from MongoDB"
 
 
 # ===================================================================
@@ -184,11 +335,11 @@ def extract_gsod_landing():
     Étape GSOD #1 (ultra simple, ultra rapide)
     ------------------------------------------
     Copie le fichier GSOD fusionné RAW → staging sans passer par pandas :
-      raw/gsod/gsod_1980_1990.csv -> staging/gsod_extracted.csv
+      raw/gsod/gsod_merged.csv -> staging/gsod_extracted.csv
     """
     import shutil
 
-    raw_path = RAW_DATA_PATH / "gsod" / "gsod_1980_1990.csv"
+    raw_path = RAW_DATA_PATH / "gsod" / "gsod_merged.csv"
     out_path = STAGING_DATA_PATH / "gsod_extracted.csv"
 
     if not raw_path.exists():

@@ -70,6 +70,12 @@ services:
       - "${MONGO_PORT}:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_INITDB_ROOT_USERNAME}", "-p", "${MONGO_INITDB_ROOT_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     restart: always
     networks:
       - atay_network
@@ -355,26 +361,62 @@ services:
     networks:
       - atay_network
       
-  streamlit:
+  # streamlit:
+  #   build:
+  #     context: ../
+  #     dockerfile: docker/streamlit/Dockerfile
+  #   container_name: atay_streamlit
+  #   command: streamlit run src/app/main.py --server.port=${STREAMLIT_PORT} --server.address=0.0.0.0
+  #   ports:
+  #     - "${STREAMLIT_PORT}:${STREAMLIT_PORT}"
+  #   volumes:
+  #     - ../src/app:/app/src/app
+  #     - ../data:/app/data
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - STREAMLIT_PORT=${STREAMLIT_PORT}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  #   networks:
+  #     - atay_network
+
+  backend:
     build:
       context: ../
-      dockerfile: docker/streamlit/Dockerfile
-    container_name: atay_streamlit
-    command: streamlit run src/app/main.py --server.port=${STREAMLIT_PORT} --server.address=0.0.0.0
+      dockerfile: docker/backend/Dockerfile
+    container_name: atay_backend
     ports:
-      - "${STREAMLIT_PORT}:${STREAMLIT_PORT}"
+      - "8000:8000"
     volumes:
-      - ../src/app:/app/src/app
+      - ../src/backend:/app/src/backend
       - ../data:/app/data
-    environment:
-      - PYTHONUNBUFFERED=1
-      - STREAMLIT_PORT=${STREAMLIT_PORT}
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
-
+      mongo:
+        condition: service_healthy
     networks:
       - atay_network
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: atay_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - atay_network
+
 
 networks:
   atay_network:

@@ -13,8 +13,8 @@ stop: # Stop Airflow services
 stop-with-volumes: # Stop Airflow services and remove volumes
 	docker-compose -f docker/docker-compose.yml down -v
 
-clean: # Remove staging and curated data
-	rm -rf data/raw/* data/staging/* data/curated/* logs/* __pycache__
+clean: # Remove staging and curated data data/raw/* data/staging/* data/curated/*
+	rm -rf data/raw/* logs/* __pycache__
 
 run-etl: # Run the ETL process
 	python src/etl/test_etl.py
